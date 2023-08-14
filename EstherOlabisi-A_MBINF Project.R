@@ -11,73 +11,12 @@ require(reshape2)
 require(shinyWidgets)
 require(scales)
 
-####1. HEATMAP ----
-onedheatmap <- function(oned.df, plot.title = "") {
-  
-  oned.df <- oned.df %>%
-    mutate_at(c("Score"), as.numeric)
-  
-  #some annotations have the same name but belong to a different database
-  #add additional column combining those entries
-  oned.df$unique.annotation <- paste(oned.df$Name, " (", oned.df$Type , ")", sep="")
-  
-  #unique annotations and celltypes
-  annotations <- sort(unique(oned.df$unique.annotation))
-  annotations <- annotations[!grepl("^\\+", annotations)]
-  celltypes <- sort(unique(oned.df$Column))
-  
-  #generate 1D score matrix
-  M.score <- matrix(ncol=length(celltypes), nrow=length(annotations))
-  
-  for(i in 1:length(celltypes)){
-    for(j in 1:length(annotations)){
-      score.value <- oned.df$Score[oned.df$Column==celltypes[i] & oned.df$unique.annotation==annotations[j]]
-      if(length(score.value)==0){score.value <- NA}
-      M.score[j,i] <- score.value
-    }
-  }
-  
-  m <- M.score
-  rownames(m) <- annotations
-  colnames(m) <- celltypes
-  
-  #Sequence of samples ('cell types' as currently above) for columns of heat map
-  m <- m[,c(1:8)]
-  m[is.na(m)] <- 0
-  
-  #collapse matrix for use in ggplot
-  m <- melt(m)
-  colnames(m) <- c("Annotations", "T-test differences", "value")
-  
-  return(
-    ggplot(data = m, aes(x = `T-test differences`, 
-                         y = reorder(Annotations, value), 
-                         fill = value))+
-      geom_tile(colour = "grey", linewidth = 1)+
-      scale_fill_gradientn(colors = c(low = "blue", mid = "white", high = "red"),
-                           na.value = "grey")+
-      scale_y_discrete(position = "right")+
-      guides(fill = guide_colourbar(title = "Colour Key"))+
-      theme(axis.title = element_text(face = "bold"),
-            axis.text.x = element_text(angle = 90),
-            axis.text = element_text(colour = "black"),
-            legend.position = "left")+
-      labs(title = plot.title, 
-           y = "Annotations")
-  )
-
-}
 
 
-
-
-####2. VOLCANO PLOT ----
+####1. PROCESS DATA MATRIX ----
 require(RColorBrewer)
 require(ggnewscale)
 
-
-
-#A function to process input data ---- 
 #Read protein.txt matrix processed in Perseus for a volcano plot. Remove all comment rows. 
 #Change column names to shorter generic names that are easier to work with. 
 #prot.dataset: Imported from Perseus following quality control, two samples t-test, and GO enrichment
@@ -136,7 +75,70 @@ process.df <- function(prot.dataset, left.range, right.range) {
 
 
 
-#A function for the Volcano plot: ----
+
+
+####2. 1D HEATMAPS ----
+onedheatmap <- function(oned.df, plot.title = "") {
+  
+  oned.df <- oned.df %>%
+    mutate_at(c("Score"), as.numeric)
+  
+  #some annotations have the same name but belong to a different database
+  #add additional column combining those entries
+  oned.df$unique.annotation <- paste(oned.df$Name, " (", oned.df$Type , ")", sep="")
+  
+  #unique annotations and celltypes
+  annotations <- sort(unique(oned.df$unique.annotation))
+  annotations <- annotations[!grepl("^\\+", annotations)]
+  celltypes <- sort(unique(oned.df$Column))
+  
+  #generate 1D score matrix
+  M.score <- matrix(ncol=length(celltypes), nrow=length(annotations))
+  
+  for(i in 1:length(celltypes)){
+    for(j in 1:length(annotations)){
+      score.value <- oned.df$Score[oned.df$Column==celltypes[i] & oned.df$unique.annotation==annotations[j]]
+      if(length(score.value)==0){score.value <- NA}
+      M.score[j,i] <- score.value
+    }
+  }
+  
+  m <- M.score
+  rownames(m) <- annotations
+  colnames(m) <- celltypes
+  
+  #Sequence of samples ('cell types' as currently above) for columns of heat map
+  m <- m[,c(1:8)]
+  m[is.na(m)] <- 0
+  
+  #collapse matrix for use in ggplot
+  m <- melt(m)
+  colnames(m) <- c("Annotations", "T-test differences", "value")
+  
+  return(
+    ggplot(data = m, aes(x = `T-test differences`, 
+                         y = reorder(Annotations, value), 
+                         fill = value))+
+      geom_tile(colour = "grey", linewidth = 1)+
+      scale_fill_gradientn(colors = c(low = "blue", mid = "white", high = "red"),
+                           na.value = "grey")+
+      scale_y_discrete(position = "right")+
+      guides(fill = guide_colourbar(title = "Colour Key"))+
+      theme(axis.title = element_text(face = "bold"),
+            axis.text.x = element_text(angle = 90),
+            axis.text = element_text(colour = "black"),
+            legend.position = "left")+
+      labs(title = plot.title, 
+           y = "Annotations")
+  )
+  
+}
+
+
+
+
+
+####3. VOLCANO Plot ----
 #The function requires a dataframe that has been processed by process.df() (step 1). It also required the curves.df exported from Perseus to create the lines on the volcano plot. The other arguments are optional.
 #go.terms = display GO terms for significant or non-significant proteins
 #plot.title = custom plot title top left
@@ -314,7 +316,7 @@ volcano_plot <- function(df, curves.df,
 
 
 
-####3. PCA plot ---- 
+####4. PCA plot ---- 
 library(ggfortify)
 library(ggrepel)
 
@@ -338,8 +340,8 @@ pca_plot <- function(df) {
 
 
 
-####4. S-curve plot ----
-#The function accepts the same dataframe from step 1 but only produces S-curves for the group pair (e.g WT vs MT) in the volcano plot
+####5. S-curve plot ----
+#The function accepts the same dataframe produced after step 1 but only produces S-curves for the group pair (e.g WT vs MT) in the volcano plot
 #The function create one s-curve plot for each group and puts them on the same image with ggarrange
 
 scurve <- function(df) {
@@ -379,7 +381,7 @@ scurve <- function(df) {
 
 
 
-####5. SHINY ----
+####6. SHINY ----
 require(shiny)
 require(shinyjs)
 require(colourpicker)
