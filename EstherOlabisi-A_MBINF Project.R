@@ -199,13 +199,14 @@ volcano_plot <- function(df, curves.df,
     theme(plot.title = element_text(face="bold", size = 20),
           plot.caption = element_text(
             colour = "darkviolet", size = 11),
+          axis.line = element_line(colour = "black"),
           text = element_text(size = text.sz))
   
   
   #Fdr curves layer 
   curve.plot <- geom_line(data = curves.df, aes(x, y), linetype=2)
   #Layer for labelling points 
-  label.pt.plot <- geom_label_repel(data = select.pts, 
+  label.pt.plot <- geom_label_repel(data = select.pts,
                                     aes(label = rownames(select.pts)),
                                     nudge_y = 0.4,  fill = "grey")
   
@@ -334,19 +335,27 @@ pca_plot <- function(df, eclipse = "yes") {
   counts <- as.data.frame(t(counts)) 
   pca <- prcomp(counts) 
   counts$Group.names <- sub("\\.\\d+$", "", rownames(counts)) #remove serial numbers to extract group names
+  text.sz = 16
+  point.sz = 3
+  scl = 0
   
-  pca_eclipse <- autoplot(pca, data = counts, size = 3, scale = 0, colour = "Group.names", frame = T, frame.type = "norm")+
+  pca_eclipse <- autoplot(pca, data = counts, size = point.sz, 
+                          scale = scl, colour = "Group.names", frame = T, frame.type = "norm") + 
     guides(colour=guide_legend("Sample Type"), fill = "none")+
     theme_bw()+
     theme(axis.line = element_line(colour = "black"),
+          text = element_text(size = text.sz),
           panel.border = element_blank())
+    
   
-  pca_plain <- autoplot(pca, data = counts, size = 4, scale = 0, colour = "Group.names")+
-    guides(colour=guide_legend("Sample Type"), fill = "none")+
+  pca_plain <- autoplot(pca, data = counts, size = point.sz, 
+                        scale = scl, colour = "Group.names") + guides(colour=guide_legend("Sample Type"), fill = "none")+
     theme_bw()+
     theme(axis.line = element_line(colour = "black"),
+          text = element_text(size = text.sz),
           panel.border = element_blank())
 
+  
   if (eclipse == "yes") {
     pca_eclipse
     
@@ -369,21 +378,29 @@ scurve <- function(df) {
   grp.names <- unique(
     sig.df[, grep("significant", colnames(sig.df))] ) 
   grp.names <- str_split_1(grp.names, "_")  
+  text.sz = 16
   
   left.gr.pl <- ggplot(data = ranked.df,
                        aes(x = Left.rank, y = Left.group))+
     geom_point(size = 2, colour = "royalblue")+
-    labs(x = paste(grp.names[2], "Proteins ranked by iBAQ Intensity"),
+    labs(x = paste(grp.names[2], "proteins ranked by iBAQ Intensity"),
          y = bquote("iBAQ Intensity for " ~ .(grp.names[2]) * " " * (Log[10])))+
-    theme_minimal()
+    theme_minimal()+
+    theme(axis.line = element_line(colour = "black"),
+          text = element_text(size = text.sz))
+    
+   
   
   right.gr.pl <- ggplot(data = ranked.df,
                         aes(x = Right.rank, y = Right.group))+
     geom_point(size = 2, colour = "royalblue")+
-    labs(x = paste0(grp.names[1], "proteins ranked by iBAQ Intensity"),
+    labs(x = paste(grp.names[1], "proteins ranked by iBAQ Intensity"),
          y = bquote("iBAQ Intensity for " ~ .(grp.names[1]) * " " * (Log[10])))+
-    theme_minimal()
-
+    theme_minimal()+
+    theme(axis.line = element_line(colour = "black"),
+          text = element_text(size = text.sz))
+    
+    
   
   return(
     #plot with a tiny column in between to serve as a larger gap
@@ -550,11 +567,14 @@ ProteomicsApp <- shinyApp(
         plotOutput("onedhm1.bio.proc"),
         downloadButton("dlhm1", "Download Heatmap 1"),
         br(),
+        br(),
         plotOutput("onedhm2.cell.comp"),
         downloadButton("dlhm2", "Download Heatmap 2"),
         br(),
+        br(),
         plotOutput("onedhm3.mol.func"),
         downloadButton("dlhm3", "Download Heatmap 3"),
+        br(),
         br(),
         plotOutput("onedhm4.keywords"),
         downloadButton("dlhm4", "Download Heatmap 4"),
@@ -754,7 +774,7 @@ ProteomicsApp <- shinyApp(
       }
     )
     output$dlhm2 <- downloadHandler( 
-      filename = "Cell_component",
+      filename = "Cell_component.png",
       content = function(file) {
         ggsave(file, plot = cell.comp(), width = 13, height = 8, dpi = 600, bg = 'white')
       }
