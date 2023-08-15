@@ -326,10 +326,10 @@ library(ggfortify)
 library(ggrepel)
 
 #This function also accepts the processed dataframe from step 1 and creates a PCA of all intensity columns.
-#Serial ID are removed from group names so that eclipses are drawn by group
+#Serial ID are removed from group names so that ellipses are drawn by group
 
 
-pca_plot <- function(df, eclipse = "yes") {
+pca_plot <- function(df, ellipse = "yes") {
   counts <- df[, grep("intensity", colnames(df), value = T)]
   counts <- na.omit(counts)
   counts <- as.data.frame(t(counts)) 
@@ -339,7 +339,7 @@ pca_plot <- function(df, eclipse = "yes") {
   point.sz = 3
   scl = 0
   
-  pca_eclipse <- autoplot(pca, data = counts, size = point.sz, 
+  pca_ellipse <- autoplot(pca, data = counts, size = point.sz, 
                           scale = scl, colour = "Group.names", frame = T, frame.type = "norm") + 
     guides(colour=guide_legend("Sample Type"), fill = "none")+
     theme_bw()+
@@ -356,8 +356,8 @@ pca_plot <- function(df, eclipse = "yes") {
           panel.border = element_blank())
 
   
-  if (eclipse == "yes") {
-    pca_eclipse
+  if (ellipse == "yes") {
+    pca_ellipse
     
   } else {
     pca_plain
@@ -511,8 +511,8 @@ ProteomicsApp <- shinyApp(
                                                        choices = list("Viridis", "Plasma", "Inferno", "Rocket", "Lajolla", "Turku", "Hawaii", "Batlow", "Spectral", "Blue-Red", "Green-Orange", "RdYlBu", "Zissou 1", "Roma"),
                                                        selected = "Viridis") )
                      ),
-                     column(width = 6, radioButtons("eclipse", 
-                                                    label = "PCA with eclipse",
+                     column(width = 6, radioButtons("ellipse", 
+                                                    label = "PCA with ellipse",
                                                     choices = list("yes", "no"),
                                                     selected = "yes",
                                                     inline = T) )
@@ -712,7 +712,7 @@ ProteomicsApp <- shinyApp(
     
     ####PCA plot
     pca.pl <- reactive({req(input$gen.pca) 
-      pca_plot( df.prot2(), eclipse = input$eclipse )
+      pca_plot( df.prot2(), ellipse = input$ellipse )
     })
     output$pcaplot <- renderPlot({
       pca.pl()
