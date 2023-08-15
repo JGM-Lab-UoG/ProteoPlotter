@@ -323,23 +323,35 @@ library(ggrepel)
 
 #This function also accepts the processed dataframe from step 1 and creates a PCA of all intensity columns.
 #Serial ID are removed from group names so that eclipses are drawn by group
-pca_plot <- function(df) {
+
+
+pca_plot <- function(df, eclipse = "yes") {
   counts <- df[, grep("intensity", colnames(df), value = T)]
   counts <- na.omit(counts)
   counts <- as.data.frame(t(counts)) 
   pca <- prcomp(counts) 
   counts$Group.names <- sub("\\.\\d+$", "", rownames(counts)) #remove serial numbers to extract group names
   
-  autoplot(pca, data = counts, scale = 0, colour = "Group.names", frame = T, frame.type = "norm")+
+  pca_eclipse <- autoplot(pca, data = counts, size = 3, scale = 0, colour = "Group.names", frame = T, frame.type = "norm")+
     guides(colour=guide_legend("Sample Type"), fill = "none")+
-    coord_fixed()+
     theme_bw()+
     theme(axis.line = element_line(colour = "black"),
           panel.border = element_blank())
+  
+  pca_plain <- autoplot(pca, data = counts, size = 4, scale = 0, colour = "Group.names")+
+    guides(colour=guide_legend("Sample Type"), fill = "none")+
+    theme_bw()+
+    theme(axis.line = element_line(colour = "black"),
+          panel.border = element_blank())
+
+  if (eclipse == "yes") {
+    pca_eclipse
+    
+  } else {
+    pca_plain
+  }
 }
-
-
-
+  
 
 ####5. S-curve plot ----
 #The function accepts the same dataframe produced after step 1 but only produces S-curves for the group pair (e.g WT vs MT) in the volcano plot
@@ -405,7 +417,7 @@ ProteomicsApp <- shinyApp(
                             fileInput("curvesfile", label = "Volcano threshold lines file") ),
                      column(width = 4,
                             fileInput("onedfile", label = "1D annotation file") ),
-                     uiOutput("enter.range"),
+                     column(width = 12, uiOutput("enter.range")),
                      column(width = 12, selectInput("left.gr", 
                                                     label = "Column range for Left group",
                                                     choices = c(),
@@ -478,12 +490,17 @@ ProteomicsApp <- shinyApp(
                                                        label = "GO terms color palette",
                                                        choices = list("Viridis", "Plasma", "Inferno", "Rocket", "Lajolla", "Turku", "Hawaii", "Batlow", "Spectral", "Blue-Red", "Green-Orange", "RdYlBu", "Zissou 1", "Roma"),
                                                        selected = "Viridis") )
-                     )
-                   )           
+                     ),
+                     column(width = 6, radioButtons("eclipse", 
+                                                    label = "PCA with eclipse",
+                                                    choices = list("yes", "no"),
+                                                    selected = "yes",
+                                                    inline = T) )
+                   )
       ),
       
-    
-        
+      
+      
       mainPanel(
         textOutput("text"),
         uiOutput("df.preview"),
@@ -574,7 +591,7 @@ ProteomicsApp <- shinyApp(
                         inputId = "right.gr",
                         choices = colnames(df.prot()))
       output$enter.range <- renderUI({
-        helpText("To calculate average protein intensities across groups, select columns for each group:")
+        helpText("Select columns for each group to calculate average protein intensities across groups")
       })
     })
     
@@ -672,7 +689,7 @@ ProteomicsApp <- shinyApp(
     
     ####PCA plot
     pca.pl <- reactive({req(input$gen.pca) 
-      pca_plot( df.prot2() )
+      pca_plot( df.prot2(), eclipse = input$eclipse )
     })
     output$pcaplot <- renderPlot({
       pca.pl()
