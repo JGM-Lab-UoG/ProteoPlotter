@@ -128,6 +128,7 @@ onedheatmap <- function(oned.df, plot.title = "") {
       theme(axis.title = element_text(face = "bold"),
             axis.text.x = element_text(angle = 90),
             axis.text = element_text(colour = "black"),
+            text = element_text(size = 16),
             legend.position = "left")+
       labs(title = plot.title, 
            y = "Annotations")
@@ -177,6 +178,7 @@ volcano_plot <- function(df, curves.df,
   ns.sz = 2 #non-sig shape size  
   ns.col = "grey" #non-sig colour
   s.sz = 4  #sig shape size
+  text.sz = 18
   
   #Base volcano plot to plot points, fdr curves, axes boundaries, and other custom arguments.
   base_vplot <- ggplot(data = ns.df, 
@@ -196,16 +198,17 @@ volcano_plot <- function(df, curves.df,
     theme_minimal()+
     theme(plot.title = element_text(face="bold", size = 20),
           plot.caption = element_text(
-            colour = "darkviolet", size = 11))
+            colour = "darkviolet", size = 11),
+          text = element_text(size = text.sz))
   
   
   #Fdr curves layer 
   curve.plot <- geom_line(data = curves.df, aes(x, y), linetype=2)
-  
   #Layer for labelling points 
   label.pt.plot <- geom_label_repel(data = select.pts, 
                                     aes(label = rownames(select.pts)),
                                     nudge_y = 0.4,  fill = "grey")
+  
   
   ###Adding layers to the base plot
   #Add GO terms for sig proteins
@@ -220,7 +223,7 @@ volcano_plot <- function(df, curves.df,
       num.sig.go, 
       palette.col), 
       na.value = alpha(ns.col, a)) + 
-    label.pt.plot
+    label.pt.plot 
   
   #Add GO terms for non-sig proteins. Grey out sig proteins. 
   nonsig.go <- base_vplot +
@@ -257,7 +260,7 @@ volcano_plot <- function(df, curves.df,
     scale_size_binned(range = c(1,8),
                       name = paste0("Average Intensity ", grp.names[2]),
                       n.breaks = 4) + 
-    label.pt.plot
+    label.pt.plot 
   
   #Options: GO term plot for sig proteins, with fdr lines and without fdr lines
   if (go.terms == "significant" && fdr.lines == "yes") {
@@ -307,7 +310,7 @@ volcano_plot <- function(df, curves.df,
         scale_fill_manual(values = group.cols)+
         guides(fill = guide_legend(order = 1))+
         label.pt.plot +
-        theme(legend.spacing = unit(-0.5, "cm"))
+        theme(legend.spacing = unit(-0.5, "cm")) 
     )
   }
   
@@ -577,7 +580,7 @@ ProteomicsApp <- shinyApp(
     
     #1D annotation file
     df.1d <- eventReactive(input$onedfile, {
-      df <- read.delim("../1d annot.txt", stringsAsFactors = F, header=T)
+      df <- read.delim(input$onedfile$datapath, stringsAsFactors = F, header=T)
       df <- df[-c(1),]
     })
     
