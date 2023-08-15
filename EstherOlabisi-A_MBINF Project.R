@@ -78,6 +78,7 @@ process.df <- function(prot.dataset, left.range, right.range) {
 
 
 ####2. 1D HEATMAPS ----
+#This function accepts the dataframe produced after 1D annotation enrichment in Perseus. The title argument is optional
 onedheatmap <- function(oned.df, plot.title = "") {
   
   oned.df <- oned.df %>%
@@ -401,7 +402,7 @@ ProteomicsApp <- shinyApp(
                      column(width = 4,
                             fileInput(inputId = "proteinfile", label = "Input Protein Groups file") ),
                      column(width = 4, 
-                            fileInput("curvesfile", label = "Input file for volcano curves") ),
+                            fileInput("curvesfile", label = "Input file for volcano plot threshold lines") ),
                      column(width = 4,
                             fileInput("onedfile", label = "1D annotation data input") ),
                      column(width = 6, 
