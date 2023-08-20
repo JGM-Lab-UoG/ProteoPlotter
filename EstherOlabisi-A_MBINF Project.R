@@ -436,7 +436,7 @@ ProteomicsApp <- shinyApp(
                      column(width = 4, 
                             fileInput("curvesfile", label = "Volcano threshold lines file") ),
                      column(width = 4,
-                            fileInput("onedfile", label = "1D annotation file") ),
+                            fileInput("onedfile", label = "1D annotation enrichment file") ),
                      column(width = 12, uiOutput("enter.range")),
                      column(width = 12, selectInput("left.gr", 
                                                     label = "Column range for Left group",
