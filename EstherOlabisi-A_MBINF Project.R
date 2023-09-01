@@ -2,21 +2,19 @@
 #Bioinformatics Master's Research Project - BINF6999
 #August 8, 2023
 
-require(ggplot2)
-require(ggpubr)
-require(gplots)
-require(ggrepel)
-require(tidyverse)
-require(reshape2)
-require(shinyWidgets)
-require(scales)
-
+#All packages used
+my.packages <- c("ggplot2", "ggpubr", "gplots", "ggrepel", "tidyverse", "reshape2", "scales", "RColorBrewer", "colourpicker", "ggnewscale", "ggfortify", "ggrepel", "shiny", "shinyjs","shinyWidgets")
+#Check if packages are installed                   
+installed.pkgs <- my.packages %in% rownames(installed.packages())
+#Install packages that aren't already installed
+if(any(installed.pkgs == FALSE)) {
+  install.packages(my.packages[!installed.pkgs])
+}
+#Load all packages
+invisible(lapply(my.packages, library, character.only = T))
 
 
 ####1. PROCESS DATA MATRIX ----
-require(RColorBrewer)
-require(ggnewscale)
-
 #Read protein.txt matrix processed in Perseus for a volcano plot. Remove all comment rows. 
 #Change column names to shorter generic names that are easier to work with. 
 #prot.dataset: Imported from Perseus following quality control, two samples t-test, and GO enrichment
@@ -88,17 +86,17 @@ onedheatmap <- function(oned.df, plot.title = "") {
   #add additional column combining those entries
   oned.df$unique.annotation <- paste(oned.df$Name, " (", oned.df$Type , ")", sep="")
   
-  #unique annotations and celltypes
+  #unique annotations and samples
   annotations <- sort(unique(oned.df$unique.annotation))
   annotations <- annotations[!grepl("^\\+", annotations)]
-  celltypes <- sort(unique(oned.df$Column))
+  samples <- sort(unique(oned.df$Column))
   
   #generate 1D score matrix
-  M.score <- matrix(ncol=length(celltypes), nrow=length(annotations))
+  M.score <- matrix(ncol=length(samples), nrow=length(annotations))
   
-  for(i in 1:length(celltypes)){
+  for(i in 1:length(samples)){
     for(j in 1:length(annotations)){
-      score.value <- oned.df$Score[oned.df$Column==celltypes[i] & oned.df$unique.annotation==annotations[j]]
+      score.value <- oned.df$Score[oned.df$Column==samples[i] & oned.df$unique.annotation==annotations[j]]
       if(length(score.value)==0){score.value <- NA}
       M.score[j,i] <- score.value
     }
@@ -106,10 +104,10 @@ onedheatmap <- function(oned.df, plot.title = "") {
   
   m <- M.score
   rownames(m) <- annotations
-  colnames(m) <- celltypes
+  colnames(m) <- samples
   
-  #Sequence of samples ('cell types' as currently above) for columns of heat map
-  m <- m[,c(1:8)]
+  #Sequence of samples for columns of heat map
+  m <- m[,c(1:length(samples))]
   m[is.na(m)] <- 0
   
   #collapse matrix for use in ggplot
@@ -148,7 +146,7 @@ onedheatmap <- function(oned.df, plot.title = "") {
 #s0 = s0 value to be shown on the plot. Default = 0.1
 #fdr = fdr value to be shown on the plot. Default = 0.05
 #fdr.lines = 'yes' to show lines and 'no' to remove lines
-#palette.col = based on hcl.color() palettes. "Viridis" is the default one
+#palette.col = based on hcl.colors() palettes. "Viridis" is the default one
 
 volcano_plot <- function(df, curves.df, 
                          go.terms = "", which.go = "Keywords", plot.title = "", 
@@ -322,8 +320,6 @@ volcano_plot <- function(df, curves.df,
 
 
 ####4. PCA plot ---- 
-library(ggfortify)
-library(ggrepel)
 
 #This function also accepts the processed dataframe from step 1 and creates a PCA of all intensity columns.
 #Serial ID are removed from group names so that ellipses are drawn by group
@@ -346,7 +342,7 @@ pca_plot <- function(df, ellipse = "yes") {
     theme(axis.line = element_line(colour = "black"),
           text = element_text(size = text.sz),
           panel.border = element_blank())
-    
+  
   
   pca_plain <- autoplot(pca, data = counts, size = point.sz, 
                         scale = scl, colour = "Group.names") + guides(colour=guide_legend("Sample Type"), fill = "none")+
@@ -354,7 +350,7 @@ pca_plot <- function(df, ellipse = "yes") {
     theme(axis.line = element_line(colour = "black"),
           text = element_text(size = text.sz),
           panel.border = element_blank())
-
+  
   
   if (ellipse == "yes") {
     pca_ellipse
@@ -363,7 +359,7 @@ pca_plot <- function(df, ellipse = "yes") {
     pca_plain
   }
 }
-  
+
 
 ####5. S-curve plot ----
 #The function accepts the same dataframe produced after step 1 but only produces S-curves for the group pair (e.g WT vs MT) in the volcano plot
@@ -388,8 +384,8 @@ scurve <- function(df) {
     theme_minimal()+
     theme(axis.line = element_line(colour = "black"),
           text = element_text(size = text.sz))
-    
-   
+  
+  
   
   right.gr.pl <- ggplot(data = ranked.df,
                         aes(x = Right.rank, y = Right.group))+
@@ -399,8 +395,8 @@ scurve <- function(df) {
     theme_minimal()+
     theme(axis.line = element_line(colour = "black"),
           text = element_text(size = text.sz))
-    
-    
+  
+  
   
   return(
     #plot with a tiny column in between to serve as a larger gap
@@ -415,10 +411,6 @@ scurve <- function(df) {
 
 
 ####6. SHINY ----
-require(shiny)
-require(shinyjs)
-require(colourpicker)
-
 #It accepts the protein matrix from Perseus and processes it using step 1 for the remaining program. It also accepts the 1D matrix from Perseus to create 1D heatmaps and to filter out less significant GO terms on the volcano plot. Thirdly, it accepts the curve matrix from Perseus for the lines on the volcano plot 
 #A Shiny app's function has two sections as seen below: the UI and the Server
 
@@ -482,7 +474,7 @@ ProteomicsApp <- shinyApp(
                          column(width = 12, br()),
                          column(width = 6, numericInput("s.knot",
                                                         label = "s0 value",
-                                                        value = 1) ),
+                                                        value = 0.1) ),
                          column(width = 6, numericInput("fdr.val",
                                                         label = "FDR value",
                                                         value = 0.05) ),
@@ -638,7 +630,7 @@ ProteomicsApp <- shinyApp(
         df
       }    
     })
-
+    
     #Dataframe preview on UI
     observe({
       req(df.prot2())
@@ -662,8 +654,8 @@ ProteomicsApp <- shinyApp(
       cat("Selected proteins: ", rownames(brushed.pts()) ) 
     }) 
     
-
-        
+    
+    
     ####create volcano plot using UI input variables  
     vplot <- reactive({
       vplot <- volcano_plot(df = df.prot2(),
