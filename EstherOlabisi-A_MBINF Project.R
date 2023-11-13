@@ -81,22 +81,14 @@ onedheatmap <- function(oned.df, plot.title = "") {
   
   oned.df <- oned.df %>%
     mutate_at(c("Score"), as.numeric)
-  
-  #some annotations have the same name but belong to a different database
-  #add additional column combining those entries
-  oned.df$unique.annotation <- paste(oned.df$Name, " (", oned.df$Type , ")", sep="")
-  
-  #unique annotations and samples
-  annotations <- sort(unique(oned.df$unique.annotation))
-  annotations <- annotations[!grepl("^\\+", annotations)]
+  annotations <- oned.df$Name
   samples <- sort(unique(oned.df$Column))
   
   #generate 1D score matrix
   M.score <- matrix(ncol=length(samples), nrow=length(annotations))
-  
   for(i in 1:length(samples)){
     for(j in 1:length(annotations)){
-      score.value <- oned.df$Score[oned.df$Column==samples[i] & oned.df$unique.annotation==annotations[j]]
+      score.value <- oned.df$Score[oned.df$Column==samples[i] & oned.df$Name==annotations[j]]
       if(length(score.value)==0){score.value <- NA}
       M.score[j,i] <- score.value
     }
@@ -105,15 +97,12 @@ onedheatmap <- function(oned.df, plot.title = "") {
   m <- M.score
   rownames(m) <- annotations
   colnames(m) <- samples
-  
-  #Sequence of samples for columns of heat map
-  m <- m[,c(1:length(samples))]
+  #Assign zero to NA values.
   m[is.na(m)] <- 0
-  
   #collapse matrix for use in ggplot
   m <- melt(m)
   colnames(m) <- c("Annotations", "T-test differences", "value")
-  
+
   return(
     ggplot(data = m, aes(x = `T-test differences`, 
                          y = reorder(Annotations, value), 
