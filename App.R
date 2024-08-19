@@ -1,5 +1,5 @@
 #Esther Olabisi-Adeniyi
-#Bioinformatics Master's Research Project - BINF6999
+#Jennifer Geddes-McAlister Lab - University of Guelph
 #August 8, 2023
 
 #All packages used
@@ -14,7 +14,7 @@
 #invisible(lapply(my.packages, library, character.only = T))
 
 #Option to run packages individually when running app on Shinyapps.io
-library(ggplot2); library(ggpubr); library(ggrepel); library(tidyverse); library(DT); library(reshape2); library(scales); library(RColorBrewer); library(colourpicker); library(ggnewscale); library(ggfortify); library(shiny); library(shinyjs); library(shinyWidgets); library(ggvenn); library(shinyBS); library(eulerr); library(shinydashboard); library(UpSetR); library(purrr); library(spsComps); library(dplyr); library(randomcoloR)
+library(ggplot2); library(ggpubr); library(ggrepel); library(tidyverse); library(DT); library(reshape2); library(scales); library(RColorBrewer); library(colourpicker); library(ggnewscale); library(ggfortify); library(shiny); library(shinyjs); library(shinyWidgets); library(ggvenn); library(shinyBS); library(eulerr); library(shinydashboard); library(UpSetR); library(purrr); library(spsComps); library(dplyr); library(randomcoloR); library(tools)
 
 
 #### EXTRACT IDENTIFIERS ----
@@ -32,7 +32,7 @@ extract_identifiers <- function(df){
 #Read protein.txt matrix processed in Perseus for a volcano plot. Remove all comment rows. 
 #Change column names to shorter generic names that are easier to work with. 
 #prot.dataset: Imported from Perseus following quality control, two samples t-test, and GO enrichment
-#gid = groups identifier
+#gid = group identifier for recognizing the "intensity" columns
 
 process_df <- function(prot.dataset, fdr = 0.05, s0 = 1, gid = NULL) {
   col.names <- names(prot.dataset)
@@ -46,8 +46,8 @@ process_df <- function(prot.dataset, fdr = 0.05, s0 = 1, gid = NULL) {
   comment_rows <- grep("^#", prot.dataset[ ,1])
   prot.dataset <- prot.dataset[-(comment_rows), ] #remove comment rows
   
-  #if p-values are present, process t-test related columns
-  if(isTruthy(grepl("p.value", col.names, ignore.case = T))) {
+  #if T-test results are present, process relevant columns
+  if(isTruthy(grepl("Student", col.names, ignore.case = T))) {
     grp.name.col <- grep(".+significant", col.names, value = T) 
     prot.dataset <- prot.dataset %>% 
       setNames(case_when(
@@ -66,7 +66,7 @@ process_df <- function(prot.dataset, fdr = 0.05, s0 = 1, gid = NULL) {
                     all_of(major.prot.id), 
                     all_of(grp.name.col),
                     any_of(c("Minus.log.pval", "q_val", "Difference", "Significant", 
-                    "Biological Process", "Cellular Component", "Molecular Function", "Keywords")))
+                             "Biological Process", "Cellular Component", "Molecular Function", "Keywords")))
     
     
     #Extract group labels from the "significant" column for use in legend
@@ -95,8 +95,6 @@ process_df <- function(prot.dataset, fdr = 0.05, s0 = 1, gid = NULL) {
   }
   return(prot.dataset)
 }
-
-
 
 
 
@@ -164,8 +162,6 @@ onedheatmap <- function(oned.df, plot.title = "", fdr = 0.05, score = 1.0) {
   )
   
 }
-
-
 
 
 
@@ -299,9 +295,9 @@ volcano_plot <- function(df, curves.df = NULL, go.category = "Keywords", plot.ti
   } else {
     final.plot <- default.plot
   }
-
+  
   if(fdr.lines == "Yes" && is.null(curves.df)){
-    final.plot <- stop("Please upload curve matrix.")
+    final.plot <- stop("Please upload the matrix containing x and y coordinates for the FDR curves.")
   } else if (fdr.lines == "Yes" && is.null(curves.df) == FALSE) {
     #Fdr curves layer
     curve.plot <- geom_line(data = curves.df, aes(x, y), linetype=2)
@@ -320,7 +316,7 @@ volcano_plot <- function(df, curves.df = NULL, go.category = "Keywords", plot.ti
 
 ####4. Venn Diagram ----
 #This function takes the matrix from Perseus and replaces the column names with group names. The function returns a narrowed down dataframe with intensity and protein ID columns only
-#gid = groups identifier
+#gid = group identifier
 groupnames_to_colnames <- function(venn.df, gid = NULL) {
   col.names <- names(venn.df)
   gid <- ifelse(is.null(gid), "group", gid)
@@ -333,7 +329,7 @@ groupnames_to_colnames <- function(venn.df, gid = NULL) {
   if (is_empty(intensity.cols) == TRUE)  {
     stop("Cannot detect intensity columns.")
   }
- 
+  
   colnames(venn.df)[intensity.cols] <- sub(".*}", "", grp.names, perl = T) #replace the intensity column headers with the group names
   comment_rows <- grep("^#", venn.df[, 1]) #index of commented rows
   venn.df <- venn.df[-(comment_rows), ] #remove commented rows
@@ -364,7 +360,6 @@ evaluate_valid_vals <- function(venn.df, group.names) {
 
 
 ####5. PCA plot ---- 
-
 #This function also accepts the main protein matrix and creates a PCA of all intensity columns.
 pca_plot <- function(df, gid = NULL, ellipse = "No", .colours =  NULL) {
   gid <- ifelse(is.null(gid), "group", gid)
@@ -383,7 +378,7 @@ pca_plot <- function(df, gid = NULL, ellipse = "No", .colours =  NULL) {
   } else { colour.layer <- NULL}
   layers <- list(
     colour.layer,
-    guides(colour=guide_legend("Sample Type", override.aes =list(size=4)), fill = "none", size = "none"),
+    guides(colour=guide_legend("SampleZ", override.aes =list(size=4)), fill = "none", size = "none"),
     theme_classic(),
     theme(axis.line = element_line(colour = "black"),
           text = element_text(size = text.sz),
@@ -485,6 +480,7 @@ dl.unit = "in"
 #Shiny UI ---- 
 ui <- shinyUI(fluidPage(
   titlePanel(h1(div(img(src = "ProteoPlotter.png")), align = "center")),
+  tags$style(HTML(".shiny-output-error-validation {color: red; font-size:18px;}")), #change error messages to colour red
   tags$style(HTML(".navbar {float:right; margin-right:50px;}")),
   navbarPage(title = h6(icon("images"), "Dimensions"),
              navbarMenu("",
@@ -504,11 +500,12 @@ ui <- shinyUI(fluidPage(
              fluidRow(
                column(4),
                column(4, style = "background-color: cornsilk;",
-                      h4("ProteoPlotter empowers users to visualize proteomics data following quality control and data analysis in Perseus.", br(), br(),
+                      h4("ProteoPlotter empowers users to visualize proteomics data after quality control and data analysis in Perseus.", br(), br(),
                          div(img(src = "ProteoPlotter_workflow.png"), style="text-align: center;"),
                          br(), br()),
-                      p("The source code and sample files are available at 'GitHub link.' ", br(), 
-                        "Contact us: jgeddesm@uoguelph.ca", style = "color: darkred;"),
+                      p("The source code and sample files are available on", 
+                        a("Github.", href = "https://github.com/JGM-Lab-UoG/Extending_Perseus-Esther-", target = "_blank"), style = "color: darkred;"),
+                      p("Contact us: jgeddesm@uoguelph.ca", style = "color: darkred;"),
                       br(), br(), br()),
                column(4)
              )),
@@ -576,7 +573,7 @@ ui <- shinyUI(fluidPage(
                               column(width = 6,
                                      fileInput(inputId = "proteinfile", label = "Matrix With T-test *") ),
                               column(width = 6, 
-                                     fileInput("curvesfile", label = "Threshold Curve Matrix")),
+                                     fileInput("curvesfile", label = "FDR Curves Matrix")),
                               column(width = 6, actionButton("gen.vplot", label = "Generate Plot")),
                               column(width = 12, br())
                             ),
@@ -622,21 +619,21 @@ ui <- shinyUI(fluidPage(
                                   column(width = 3, numericInput("legend.brks",
                                                                  label = "# Legend Breaks",
                                                                  value = 3, step = 1)),
-                                  column(width = 6, selectInput("go.types",
-                                                                label = "Gene Ontology Category",
-                                                                choices = list("Keywords", "Cellular Component", "Molecular Function", "Biological Process"),
-                                                                selected = "Keywords",
-                                                                width = '100%')),
-                                  column(width = 6, radioButtons("which.proteins",
-                                                                label = "GO Terms: All / Significant proteins",
-                                                                choices = list("All", "Significant"),
-                                                                selected = "All",
-                                                                width = '100%')),
+                                  column(width = 12, h5("Gene Ontology Terms", style = "color: darkred;")),
+                                  column(width = 12, selectInput("go.categories",
+                                                                 label = "Hover over the plot to display:",
+                                                                 choices = list("Keywords", "Cellular Component", "Molecular Function", "Biological Process"),
+                                                                 selected = "Keywords",
+                                                                 width = '100%')),
                                   column(width = 12, selectInput("go.terms",
-                                                                label = "GO terms",
-                                                                choices = list(), multiple = T)),
+                                                                 label = "Label on the plot:",
+                                                                 choices = list(), multiple = T)),
+                                  column(width = 12, radioButtons("which.proteins",
+                                                                  label = "For all vs. significant proteins",
+                                                                  choices = list("All", "Significant"),
+                                                                  selected = "All", inline = T, width = '100%')),
                                   column(width = 12, checkboxInput("filter.terms.by.1d",
-                                                                   label = "Keep only GO terms from 1D enrichment data (Upload 1D matrix in Tab)")),
+                                                                   label = HTML("Keep only GO terms from the 1D enrichment data<br/>(Requires the 1D matrix*)"))),
                                   column(width = 12, br()),
                                   column(width = 12, actionButton("reset", label = "Reset Volcano Plot")),
                               )
@@ -647,20 +644,21 @@ ui <- shinyUI(fluidPage(
                  
                  h4("Volcano Plot",  align = "center"),
                  ##Volcano plot output with brush selection of points
+                 uiOutput("upload.dfcurves"),
                  plotOutput("volcanoplot",
                             brush = brushOpts("vplot.brush"), 
                             hover = hoverOpts("vplot.hover")),
+                 h6("Click and drag cursor to highlight protein IDs.", style = "color: darkred;"),
+                 column(width=4,
+                        actionButton("deselect.ids", label = "Deselect IDs")),
                  br(), br(),
                  verbatimTextOutput("hover.info"),
                  br(), br(), br(),
-                 h6("Click and drag cursor to highlight protein IDs.", style = "color: darkred;"),
                  column(width=4, 
                         textInput("vplot.title",
                                   label = "Volcano Plot Title (Optional)",
                                   value = NULL,
                                   placeholder = "Enter text...")),
-                 column(width=4,
-                        actionButton("deselect.ids", label = "Deselect IDs")),
                  column(width = 4, 
                         downloadBttn("dlvplot", "Volcano plot", size = "xs")),
                  br(), br(), br(),br(),
@@ -677,14 +675,13 @@ ui <- shinyUI(fluidPage(
                  
                  column(width = 4, actionButton("gen.pca", label = "Generate Plot")),
                  column(12, br()),
+                 column(width = 12, h6("Group identifier: based on grouping levels in the uploaded matrix.")),
                  column(width = 6, selectizeInput("grp.identifier", 
-                                                  label = "Groups Identifier",
+                                                  label = "Group Identifier",
                                                   choices = c())),
                  column(width = 4, radioButtons("ellipse", label = "Ellipse",
                                                 choices = list("Yes", "No"), selected = "No",
                                                 inline = T), offset = 2),
-                 column(width = 12, h6("Groups identifier: based on commented rows atop the matrix.")),
-                 
                  column(width = 12, uiOutput("pca.colour.picker")),
                  
                  br(), br(), br(), br(), br(), br(), br(), br(), br(), br(), br(), br(), br(), br(), br()
@@ -705,7 +702,9 @@ ui <- shinyUI(fluidPage(
                  column(12, br()), br(), br(), br(),
                  column(width = 5, numericInput("y.incr", label = "Increment (y-axis)", value = 1)),
                  column(width = 12, uiOutput("scurve.colour.picker")),
-                 br(), br(), br(), br()
+                 br(), br(), br(), br(), br(), br(), br(), br(), br(), br(), br(), br()
+                 
+                 
                ),
                mainPanel(
                  ##S-curve plot output
@@ -722,9 +721,9 @@ ui <- shinyUI(fluidPage(
                             fluidRow(
                               column(width = 12,
                                      fileInput("vennfile", label = "Venn Diagram / UpSet Plot Matrix")),
-                              column(width = 12, h6("Groups identifier: based on commented rows atop the matrix.")),
+                              column(width = 12, h6("Group identifier: based on based on grouping levels in the uploaded matrix.")),
                               column(width = 6, selectizeInput("grp.identifier.v", 
-                                                               label = "Groups Identifier", 
+                                                               label = "Group Identifier", 
                                                                choices = c(), width = "80%")),
                               column(width = 6, actionButton("eval.valid.vals", label = "Generate Venn", 
                                                              style="color: blue;")),
@@ -814,20 +813,21 @@ ui <- shinyUI(fluidPage(
                                tags$b("Input:"), "The volcano plot matrix is used to generate both the PCA plot and Dynamic range plot.", br(),
                                "T-test result columns are not required for these plots so you export the imputed matrix without calculating T-test results.", br(),
                                tags$b("Create:"), "Simply upload the matrix within the 'Volcano Plot' tab, select the appropriate group identifier, then return to the 'PCA Plot' or 'Dynamic Range Plot' tab to generate the figures.", br(), 
-                               "For the PCA plot, you can add ellipses to show the probability distribution of observations within a 95% CI.", br(), br(),
+                               "For the PCA plot, you can add ellipses to show the probability distribution of observations within a 95% CI.", br(),
+                               "*The PCA plot can show ellipses only when there are more than 3 groups.", br(), br(),
                                
                                h5("Venn Diagram",  style="font-weight:bold; color:#000045FF;"),
                                tags$b("Input:"), "Accepts the matrix containing unimputed protein abundance values.", br(),
                                tags$b("Create:"), "Upload the matrix within the 'Venn Diagram' tab, select the appropriate identifier, then generate the Venn diagram.", br(),
                                "Using the customization options, you can choose which groups to be compared with the figure. In addition, you can adjust the minimum proportion of valid values, which determines the presence of a protein within a group.", br(),
-                               "*This feature visualizes a maximum of five groups. See UpSet plot feature for more."
+                               "*This feature visualizes a maximum of 5 groups. See UpSet plot feature for more."
                              )),
                       
                       column(4,
                              p(h5("UpSet Plot",  style="font-weight:bold; color:#000045FF;"),
                                tags$b("Input:"), "Utilizes the same unimputed matrix as the Venn diagram.", br(),
                                tags$b("Create:"), "Upload the matrix within the 'Venn Diagram' tab, select the identifier, choose groups if needed, then generate the UpSet plot within the 'UpSet Plot' tab.", br(),
-                               "*With the UpSet plot, you can compare more than five groups.", br(), br() 
+                               "*With the UpSet plot, you can compare more than 5 groups.", br(), br() 
                              ))
              )
     )
@@ -844,68 +844,88 @@ server <- function(input, output, session) {
   #Read files -----
   #Protein input file
   df.prot <- eventReactive(input$proteinfile, {
-    read.delim(input$proteinfile$datapath, na.strings = c("NA", "NaN"), check.names = F, quote = "")
+    f.path  <- input$proteinfile$datapath
+    validate(need(file_ext(f.path) == "txt", "Cannot detect a .txt file. Please check."))
+    read.delim(f.path, na.strings = c("NA", "NaN"), check.names = F, quote = "")
   })
   #Populate grp.identifier
   observe({req(df.prot())
-    identifiers <- extract_identifiers(df.prot())
-    updateSelectizeInput(session, "grp.identifier",
-                         choices = identifiers,
-                         server = T)
+    tryCatch({
+      identifiers <- extract_identifiers(df.prot())
+      updateSelectizeInput(session, "grp.identifier",
+                           choices = identifiers,
+                           server = T)
+    })
+    # print(is.null(identifiers))
+    # },
+    # warning = function(w) {
+    #   showNotification(w$message, '', duration = NULL, type = "error")
+    #   return()
+    # }, 
+    # error = function(e) {
+    #   showNotification(e$message, '', duration = NULL, type = "error")
+    #   return()
+    # }, 
+    # silent=TRUE )
   })
   #Curves file
   df.curves <- eventReactive(input$curvesfile, {
-    file <- input$curvesfile$datapath
-    # file.data <- read.table(file, header = T, nrow = 1)
-    # headers <- c("x", "y")
-    # validate(need(headers %in% names(file.data),
-    #               "Please upload the matrix containing x and y values for the FDR curves"))
-    read.table(file, header = T)
+    f.path <- input$curvesfile$datapath
+    validate(need(file_ext(f.path) == "txt", "Cannot detect a .txt file for 'FDR Curves Matrix'. Please check.")) #Ensure that input is a txt file
+    df <- read.delim(f.path, header = T, nrows = 1) #If txt file, read the df but only the first row
+    headers <- c("x", "y") #define headers to look for below
+    validate(need(headers %in% colnames(df), "Please upload the matrix containing x and y coordinates for the FDR curves.")) #Ensure that column names in the input file match the defined headers (x and y)
+    df <- read.table(f.path, header = T) #If column names are x and y, read the full df
   })
   #1D annotation file
   df.1d <- eventReactive(input$onedfile, {
-    df <- read.delim(input$onedfile$datapath, comment.char = "#", check.names = F, quote = "") %>%
-      mutate(Column = sub(".*Difference ", "", Column)) #shorten 'Column' terms
+    f.path <- input$onedfile$datapath
+    validate(need(file_ext(f.path) == "txt", "Cannot detect a .txt file. Please check."))
+    df <- read.delim(f.path, comment.char = "#", check.names = F, quote = "", nrows = 1) 
+    headers <- c("Column", "Type", "Name", "Score")
+    validate(need(headers %in% colnames(df), "At least one of the following columns is missing within the 1D matrix:
+                  'Column', 'Type', 'Name', 'Score'"))
+    df <- read.delim(f.path, comment.char = "#", check.names = F, quote = "") %>%
+      mutate(Column = sub(".*Difference ", "", Column)) #shorten the content of the column called 'Column' to retain the names of groups only
   })
   #update UI with 1d group names
   observe({df.1d()
-    updateSelectizeInput(session,
-                         "one.d.order",
-                         choices = unique(df.1d()$Column),
-                         selected = unique(df.1d()$Column),
-                         server = T)
+    tryCatch({
+      updateSelectizeInput(session,
+                           "one.d.order",
+                           choices = unique(df.1d()$Column),
+                           selected = unique(df.1d()$Column),
+                           server = T)
+    })
   })
   #Reorder 1d groups based on UI selection
   df.1d2 <- reactive({req(df.1d(), input$one.d.order)
-    df <- df.1d()
-    df %>%
-      filter(Column %in% input$one.d.order) %>% #keep selected groups
-      mutate(Column = factor(Column, levels = input$one.d.order)) #order 
+    tryCatch({
+      df <- df.1d()
+      df %>%
+        filter(Column %in% input$one.d.order) %>% #keep selected groups
+        mutate(Column = factor(Column, levels = input$one.d.order)) #order 
+    })
   })
   #Process the protein matrix 
-  df.prot2 <- reactive({req(df.prot(), input$grp.identifier)
-    if(!is.null(input$grp.identifier)){
-      df <- process_df(prot.dataset = df.prot(), fdr = input$fdr.val, s0 = input$s.knot, gid = input$
-                         grp.identifier)
-    }
-    # if (is.null(input$onedfile)) {
-    #   df
-    # } else {
-    #   # Retain only those GO terms found in the 1D Annotation file
-    #   df$Keywords[-which(gsub(pattern = "\\*$", replacement = "", df$Keywords) %in% df.1d()$Name)] <- NA
-    #   df$`Cellular Component`[-which(gsub(pattern = "\\*$", replacement = "", df$`Cellular Component`) %in% df.1d()$Name)] <- NA
-    #   df$`Molecular Function`[-which(gsub(pattern = "\\*$", replacement = "", df$`Molecular Function`) %in% df.1d()$Name)] <- NA
-    #   df$`Biological Process`[-which(gsub(pattern = "\\*$", replacement = "", df$`Biological Process`) %in% df.1d()$Name)] <- NA
-    #   df
-    # }    
+  df.prot2 <- reactive({
+    req(df.prot())
+    tryCatch({
+      if (length(input$grp.identifier) > 1){ 
+        grp.identifier = input$grp.identifier
+      } else {
+        grp.identifier = NULL
+      }
+      df <- process_df(prot.dataset = df.prot(), fdr = input$fdr.val, s0 = input$s.knot, gid = grp.identifier)
+    })
   })
   
   
   ####Volcano plot -----  
   #hover to show all GO Terms per point
-  hovered.pts <- reactive({req(input$go.types, input$vplot.hover)
+  hovered.pts <- reactive({req(input$go.categories, input$vplot.hover)
     pts <- nearPoints(df.prot2(), input$vplot.hover, threshold = 10)
-    pts[[input$go.types]] 
+    pts[[input$go.categories]] 
     # current.pts <- brushed.pts() #access reactive val
     # current.pts <- union(current.pts, ids) #return every selected point to the reactive value
     # brushed.pts(current.pts)
@@ -913,80 +933,108 @@ server <- function(input, output, session) {
   })
   #display hover
   output$hover.info <- renderPrint({ 
-    pts <- hovered.pts()
-    if (!is_empty(pts)){
-      pts <- gsub(";", ", ", pts)
-      pts <- str_wrap(pts, width = 60)
-      cat(input$go.types, ":\n", pts, sep = "") 
-    } 
+    tryCatch({
+      pts <- hovered.pts()
+      if (!is_empty(pts)){
+        pts <- gsub(";", ", ", pts)
+        pts <- str_wrap(pts, width = 60)
+        cat(input$go.categories, ":\n", pts, sep = "") 
+      } 
+    })
   })
   #brush to highlight protein IDs
   brushed.pts <- reactiveVal()
   observeEvent(input$vplot.brush, {
-    pts <- brushedPoints(df.prot2(), input$vplot.brush) #select brushed points as rows of df.prot
-    # major.prot.id <- grep("majority", names(df.prot2()), ignore.case = T, value = T)
-    ids <- rownames(pts) #extract protein row indices
-    current.pts <- brushed.pts() #access reactive val
-    current.pts <- union(current.pts, ids) #return every selected point to the reactive value
-    brushed.pts(current.pts)
-    brushed.pts()
+    tryCatch({
+      pts <- brushedPoints(df.prot2(), input$vplot.brush) #select brushed points as rows of df.prot
+      # major.prot.id <- grep("majority", names(df.prot2()), ignore.case = T, value = T)
+      ids <- rownames(pts) #extract protein row indices
+      current.pts <- brushed.pts() #access reactive val
+      current.pts <- union(current.pts, ids) #return every selected point to the reactive value
+      brushed.pts(current.pts)
+      brushed.pts()
+    })
   })
   observeEvent(input$deselect.ids, {
-    brushed.pts(NULL)
+    brushed.pts(NULL) #clear IDs highlighted on the plot
+    session$resetBrush("vplot.brush") #clear frame brushed onto the plot
   })
   #Populate list of go terms to UI
-  observe({req(input$go.types, df.prot2())
-    go.category <- input$go.types
-    df.prot2 <- df.prot2()
-
-    # sig.df <- df.prot2 %>%
-    #   filter(q_val<=input$fdr.val & Difference>=input$s.knot | q_val<=input$fdr.val & Difference<= -input$s.knot)
-    if(go.category %in% names(df.prot2)){
-      all.go.terms <- df.prot2[, go.category] %>% str_split(., ";") %>% ifelse(. == "", NA, .) %>% 
-        unlist() %>% unique() %>% sort(na.last = T) #extract unique GO terms & sort so NA is last
-
-      # if (!is.null(df.1d())) {
-      if (input$filter.terms.by.1d == T) {
-        all.go.terms <- all.go.terms[all.go.terms %in% df.1d()$Name]
-      } 
-      #populate go terms list
-      updateSelectInput(session,
-                           "go.terms",
-                           choices = c("Select from dropdown"='', all.go.terms))
-    } else { 
-      all.go.terms <- print(paste("There is no", go.category, "Gene Ontology in the uploaded matrix."))} 
-    
-    
+  observe({req(input$go.categories, df.prot2())
+    tryCatch({
+      go.category <- input$go.categories
+      df.prot2 <- df.prot2()
+      if(go.category %in% names(df.prot2)){
+        all.go.terms <- df.prot2[, go.category] %>% str_split(., ";") %>% ifelse(. == "", NA, .) %>% 
+          unlist() %>% unique() %>% sort(na.last = T) #extract unique GO terms & sort so NA is last
+        
+        
+        if (input$filter.terms.by.1d == T) {
+          all.go.terms <- all.go.terms[all.go.terms %in% df.1d()$Name]
+        } 
+        #populate go terms list
+        # validate(need(!is.null(df.1d()),
+        #               "Please upload the 1D matrix to filter GO terms."))
+        updateSelectInput(session,
+                          "go.terms",
+                          choices = c("Select from dropdown"='', all.go.terms))
+      }
+      
+    })
   })
-
-  vplot <- reactive({req(input$gen.vplot, df.prot2(), input$left.col, input$right.col)
-    vplot <- volcano_plot(df = df.prot2(),
-                          curves.df = df.curves(),
-                          plot.title = input$vplot.title,
-                          go.category = input$go.types,
-                          s0 = input$s.knot,
-                          fdr = input$fdr.val,
-                          group.colors = c(input$left.col, input$right.col),
-                          fdr.lines = input$fdrlines,
-                          avg.intensity = input$show.avg, 
-                          num.breaks = input$legend.brks, 
-                          select.ids = c(brushed.pts()), 
-                          select.go.terms = input$go.terms,
-                          sig_or_all = input$which.proteins)
+  
+  
+  vplot <- reactive({
+    req(df.prot2())
+    req.pattern <- grepl("Student", x = names(df.prot2()))
+    validate(
+      need(isTruthy(req.pattern), 
+           "Cannot detect Student's T-test columns for the volcano plot within the uploaded matrix. Please check."))
+    req(input$gen.vplot, input$left.col, input$right.col)
+    # curves.df <- df.curves()
+    # print(curves.df)
+    tryCatch({
+      vplot <- volcano_plot(df = df.prot2(),
+                            curves.df = df.curves(),
+                            plot.title = input$vplot.title,
+                            go.category = input$go.categories,
+                            s0 = input$s.knot,
+                            fdr = input$fdr.val,
+                            group.colors = c(input$left.col, input$right.col),
+                            fdr.lines = input$fdrlines,
+                            avg.intensity = input$show.avg, 
+                            num.breaks = input$legend.brks, 
+                            select.ids = c(brushed.pts()), 
+                            select.go.terms = input$go.terms,
+                            sig_or_all = input$which.proteins)
+    })
   })
   #send vplot to the UI
   output$volcanoplot <- renderPlot({
-    if (is.na(input$xmin) && is.na(input$xmax) && is.na(input$ymin) && is.na(input$ymax)) {
-      vplot()[[1]]
-    } else {
-      #Axes limits adjustment
-      vplot()[[1]]+
-        coord_cartesian(xlim = c(input$xmin, input$xmax),
-                        ylim = c(input$ymin, input$ymax),
-                        expand = T)
-    }
+    
+    tryCatch({
+      if (is.na(input$xmin) && is.na(input$xmax) && is.na(input$ymin) && is.na(input$ymax)) {
+        vplot()[[1]]
+      } else {
+        #Axes limits adjustment
+        vplot()[[1]]+
+          coord_cartesian(xlim = c(input$xmin, input$xmax),
+                          ylim = c(input$ymin, input$ymax),
+                          expand = T)
+      }
+    })
   })
-  #Reset to default plot
+  #Add error message for when FDR curve file is missing.
+  observe({
+    fdr.opts <- input$fdrlines
+    curve.file <- input$curvesfile
+    if(fdr.opts == "Yes" && is.null(curve.file)){
+      output$upload.dfcurves <- renderUI({ h4("Please upload the matrix containing x and y coordinates for the FDR curves.",  style = "color: red;") })
+    } else if(fdr.opts == "No" | !is.null(curve.file)){  
+      output$upload.dfcurves  <- renderUI({ NULL }
+      )}
+  })
+  #Reset volcano to default plot
   observeEvent(input$reset, {
     shinyjs::reset("reset.grp")
   })
@@ -1004,10 +1052,12 @@ server <- function(input, output, session) {
   
   ####PCA plot -----
   pca.groups <- reactive({req(input$grp.identifier, df.prot()) 
-    df <- groupnames_to_colnames(df.prot(), gid = input$grp.identifier) %>% dplyr::select(!contains("IDs")) #add group names as new header
-    #Extract group names from df. Also, Shiny does not like non-alphanumeric symbols (\\W) in input ids so remove if any
-    grp.names <- gsub("\\.\\d+", "", names(df)) %>% unique(.) %>% 
-      gsub("\\W", "_", ., perl = T) 
+    tryCatch({
+      df <- groupnames_to_colnames(df.prot(), gid = input$grp.identifier) %>% dplyr::select(!contains("IDs")) #add group names as new header
+      #Extract group names from df. Also, Shiny does not like non-alphanumeric symbols (\\W) in input ids so remove if any
+      grp.names <- gsub("\\.\\d+", "", names(df)) %>% unique(.) %>% 
+        gsub("\\W", "_", ., perl = T) 
+    })
   })
   observeEvent(pca.groups(), {
     pca.groups <- pca.groups()
@@ -1037,7 +1087,9 @@ server <- function(input, output, session) {
     })
   })
   pca.pl <- reactive({req(input$gen.pca, input$grp.identifier, df.prot()) 
-    pca_plot(df.prot(), gid = input$grp.identifier, ellipse = input$ellipse, .colours = pca.colour.ids())
+    tryCatch({
+      pca_plot(df.prot(), gid = input$grp.identifier, ellipse = input$ellipse, .colours = pca.colour.ids())
+    })
   })
   output$pcaplot <- renderPlot({
     pca.pl()
@@ -1053,7 +1105,9 @@ server <- function(input, output, session) {
   ####S-curve plot -----
   scurve.pl <- reactive({
     req(input$gen.scurve, input$grp.identifier)
+    tryCatch({
       scurve_plot(df.prot(), gid = input$grp.identifier, y.increment = input$y.incr, .colours = scurve.colour.ids()) 
+    })
   })
   output$scurveplot <- renderPlot({
     scurve.pl() 
@@ -1074,15 +1128,17 @@ server <- function(input, output, session) {
   ####Heatmap plots -----
   #create heatmap list
   plotlist.1d <- reactive({
-    unique.annot.types <- df.1d2() %>%
-      group_by(Type) %>%
-      group_split()
-    lapply(unique.annot.types, 
-           function(x) onedheatmap(x, 
-                                   plot.title = paste(unique(x$Type)), 
-                                   fdr = input$change.fdr,
-                                   score = input$change.score
-           ))
+    tryCatch({
+      unique.annot.types <- df.1d2() %>%
+        group_by(Type) %>%
+        group_split()
+      lapply(unique.annot.types, 
+             function(x) onedheatmap(x, 
+                                     plot.title = paste(unique(x$Type)), 
+                                     fdr = input$change.fdr,
+                                     score = input$change.score
+             ))
+    })
   })
   #plot heatmaps individually
   bio.proc <- reactive(plotlist.1d()[[1]]
@@ -1153,33 +1209,41 @@ server <- function(input, output, session) {
   ####Venn Diagram and UpSet Plot-----
   #Read venn matrix 
   df.venn <- eventReactive(input$vennfile, {
-    df <- read.delim(input$vennfile$datapath, check.names = F, quote = "")
+    f.path = input$vennfile$datapath #file path
+    validate(need(file_ext(f.path) == "txt", "Cannot detect a .txt file. Please check."))
+    read.delim(f.path, check.names = F, quote = "")
   })
   observe({req(df.venn())
-    identifiers.v <- extract_identifiers(df.venn())
-    updateSelectizeInput(session, "grp.identifier.v",
-                         choices = identifiers.v,
-                         server = T)
+    tryCatch({
+      identifiers.v <- extract_identifiers(df.venn())
+      updateSelectizeInput(session, "grp.identifier.v",
+                           choices = identifiers.v,
+                           server = T)
+    })
   })
   
   observe({req(input$grp.identifier.v)
-    if(!is.null(input$grp.identifier.v)){
-      df <- groupnames_to_colnames(df.venn(), gid = input$grp.identifier.v)
-      venn.groups <- select(df, !contains("IDs"))
-      venn.groups <- gsub("\\.\\d+", "", names(venn.groups)) #remove serial numbers to extract group names
-      venn.groups <- unique(venn.groups)
-      #Show group names on UI
-      updateSelectInput(session,
-                        inputId = "venngroups",
-                        choices = venn.groups,
-                        selected = venn.groups)
-    }
+    tryCatch({
+      if(!is.null(input$grp.identifier.v)){
+        df <- groupnames_to_colnames(df.venn(), gid = input$grp.identifier.v)
+        venn.groups <- select(df, !contains("IDs"))
+        venn.groups <- gsub("\\.\\d+", "", names(venn.groups)) #remove serial numbers to extract group names
+        venn.groups <- unique(venn.groups)
+        #Show group names on UI
+        updateSelectInput(session,
+                          inputId = "venngroups",
+                          choices = venn.groups,
+                          selected = venn.groups)
+      }
+    })
   })
   #Evaluate valid values
   venn.input <- reactive({req(df.venn(), input$eval.valid.vals, input$venngroups)
-    df <- groupnames_to_colnames(df.venn(), gid = input$grp.identifier.v)
-    evaluate_valid_vals(venn.df = df, 
-                        group.names = input$venngroups)
+    tryCatch({
+      df <- groupnames_to_colnames(df.venn(), gid = input$grp.identifier.v)
+      evaluate_valid_vals(venn.df = df, 
+                          group.names = input$venngroups)
+    })
   })
   #Generate dynamic colour pickers for each venn group based on group names
   venn.groups <- eventReactive(input$venngroups, {
@@ -1193,7 +1257,7 @@ server <- function(input, output, session) {
     output$col.title.venn <- renderUI({ 
       p("Colours:", style = "font-weight: bold; color: #8b0000; background-color: lightgrey;")
     })
-
+    
     output$venn.colour.picker <- renderUI({
       lapply(venn.groups, function(v) {
         column(width = 4, colourpicker::colourInput(inputId = v, label = paste0(v),
@@ -1225,16 +1289,18 @@ server <- function(input, output, session) {
   
   #Create venn diagram with binary values and colourinput variables
   venn.pl <- reactive({req(venn.input())
-    venn.fit <- lapply(venn.input()[["binary.result"]],
-                       \(x) which(x==1))
-    venn.fit <- eulerr::venn(venn.fit)
-    pl <- plot(venn.fit,
-               quantities = list(type = input$count_percent,
-                                 fontsize = input$numsize),
-               fills= list(fill = venn.colour.ids()),
-               edges = list(lwd = input$linewidth, lty = input$linetype),
-               labels = list(fontsize = input$labelsize))
-    return(pl)
+    tryCatch({
+      venn.fit <- lapply(venn.input()[["binary.result"]],
+                         \(x) which(x==1))
+      venn.fit <- eulerr::venn(venn.fit)
+      pl <- plot(venn.fit,
+                 quantities = list(type = input$count_percent,
+                                   fontsize = input$numsize),
+                 fills= list(fill = venn.colour.ids()),
+                 edges = list(lwd = input$linewidth, lty = input$linetype),
+                 labels = list(fontsize = input$labelsize))
+      return(pl)
+    })
   })
   #Generate Venn diagram and add download handler
   output$vennplot <- renderPlot({ venn.pl() })
@@ -1252,16 +1318,18 @@ server <- function(input, output, session) {
   
   #UpSet Plot
   upset.pl <- reactive({req(df.venn(), input$gen.upset, input$venngroups)
-    if(!is.null(input$grp.identifier.v)){
-      df <- groupnames_to_colnames(df.venn(), gid = input$grp.identifier.v)
-      results <- evaluate_valid_vals(venn.df = df,
-                                     group.names = input$venngroups)
-      binary <- as.data.frame(results[["binary.result"]], check.names = F)
-      pl <- upset(binary, order.by = c("freq"), text.scale = input$upset.text.sz, 
-                  sets.bar.color = upset.colour.ids(),
-                  nsets = length(binary), nintersects = NA, sets = names(binary))
-    }
-    return(pl)
+    tryCatch({
+      if(!is.null(input$grp.identifier.v)){
+        df <- groupnames_to_colnames(df.venn(), gid = input$grp.identifier.v)
+        results <- evaluate_valid_vals(venn.df = df,
+                                       group.names = input$venngroups)
+        binary <- as.data.frame(results[["binary.result"]], check.names = F)
+        pl <- upset(binary, order.by = c("freq"), text.scale = input$upset.text.sz, 
+                    sets.bar.color = upset.colour.ids(),
+                    nsets = length(binary), nintersects = NA, sets = names(binary))
+      }
+      return(pl)
+    })
   })
   output$upset.plot <- renderPlot({upset.pl()})
   output$dlupsetplot <- downloadHandler(
