@@ -1,7 +1,7 @@
 
 # ProteoPlotter
 
-# Overview
+## Overview
 ProteoPlotter is an interactive web-based software developed to complement [Perseus](https://maxquant.net/perseus/) in generating multidimensional figures for the analysis of proteomics datasets.  
 
 ## Features
