@@ -23,7 +23,7 @@ Within this repository, we have provided sample datasets exported from Perseus (
 ProteoPlotter is compatible with the Windows OS. 
 
 ## Getting Started
-1. **Download the `ProteoPlotter_Desktop.zip` folder**: The latest version is available [here](https://github.com/EstherOlabisi/ProteoPlotter_code/tags).
+1. **Download the `ProteoPlotter_Desktop.zip` folder**: The latest version is available [here](https://github.com/JGM-Lab-UoG/Extending_Perseus-Esther-/releases/tag/v1.0.0).
 2. **Access the folder**: Unzip the folder, then click the `run.vbs` file to run ProteoPlotter on your PC. 
 3. **Prepare data or apply sample datasets**: Generate tabular output files from Perseus or utilize the sample input files provided.
 4. **Upload and sisualize**: Upload input files to the ProteoPlotter software to create data visualizations!
