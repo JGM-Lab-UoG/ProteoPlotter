@@ -28,7 +28,7 @@ ProteoPlotter is compatible with the Windows OS.
 3. **Prepare data or apply sample datasets**: Generate tabular output files from Perseus or utilize the sample input files provided.
 4. **Upload and sisualize**: Upload input files to the ProteoPlotter software to create data visualizations!
 5. **Visit the `Guide` tab on ProteoPlotter**: Feel free to peruse the instructions for more help.
-
+6. **Source code**: The source code for ProteoPlotter is available as `App.R` within this repository. This file can 
 
 
 
