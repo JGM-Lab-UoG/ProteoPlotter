@@ -11,7 +11,7 @@ ProteoPlotter is an interactive web-based software developed to complement [Pers
 - **Comprehensive Guide**: Instructions for preparing and uploading Perseus output files are provided to facilitate ease of use.
 
 ## Sample Input Datasets
-Within the `Sample_Files` folder of this repository, we have provided sample datasets exported from Perseus (v2.1.3.0) for visualizing the dynamic proteome of *Klebsiella pneumoniae*, based on a [previous study](https://doi.org/10.3389/fmicb.2020.00546). The Perseus session file for the analytical workflow that generates the sample datasets is also available, allowing users to follow the initial data analysis process. 
+In the `Sample_Files` folder of this repository, we have provided sample datasets exported from Perseus (v2.1.3.0) for visualizing the dynamic proteome of *Klebsiella pneumoniae*, previously published in this [study](https://doi.org/10.3389/fmicb.2020.00546). The Perseus session file for the analytical workflow that generates the sample datasets is also available, allowing users to follow the initial data analysis process. 
 - `Sample_1d_matrix.txt`: Input file for generating 1D annotation enrichment heatmaps.
 - `Sample_protein_main.txt`: Input file for generating volcano, PCA, and dynamic range plots.  
 - `Sample_curve_matrix.txt`: Input file for overlaying false discovery rate (FDR) threshold curves on volcano plots. 
