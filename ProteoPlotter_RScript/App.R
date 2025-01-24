@@ -157,8 +157,8 @@ onedheatmap <- function(oned.df, plot.title = "", fdr = 0.05, score = 1.0) {
       coord_fixed(ratio = 0.5)+
       scale_x_discrete(expand=c(0,0))+
       scale_y_discrete(expand=c(0,0))+
-      labs(title = paste0(plot.title, "\n"), 
-           y = "Annotations")
+      labs(title = paste0(plot.title, "\n"), x = 'T-test comparison',
+           y = "Annotation")
   )
   
 }
@@ -257,7 +257,11 @@ volcano_plot <- function(df, curves.df = NULL, go.category = "Keywords", plot.ti
     go.terms.plot <- geom_label_repel(data = hilight.go.terms,
                                       aes(label = !!sym(go.category)),
                                       nudge_x = 0.3, nudge_y = 0.3, fill = alpha("lightgreen", 0.7), 
-                                      size = 3.5, max.overlaps = getOption("ggrepel.max.overlaps", nrow(hilight.go.terms)))
+                                      size = 3.5, 
+                                      max.overlaps = getOption("ggrepel.max.overlaps", 
+                                                                           nrow(hilight.go.terms)
+                                      )
+    )
   }
   
   #Create default plot
@@ -476,22 +480,36 @@ scurve_plot <- function(df, gid = NULL, y.increment = 1, .colours = NULL) {
 #It accepts the protein matrix from Perseus and processes it using step 1 for the remaining program. It also accepts the 1D matrix from Perseus to create 1D heatmaps and to filter out less significant GO terms on the volcano plot. Thirdly, it accepts the curve matrix from Perseus for the lines on the volcano plot 
 #A Shiny app's function has two sections as seen below: the UI and the Server
 
-dl.unit = "in"
+dl.unit = "px"
+
 #Shiny UI ---- 
 ui <- shinyUI(fluidPage(
-  titlePanel(h1(div(img(src = "ProteoPlotter.png")), align = "center")),
+  titlePanel(h1(div(img(src = "ProteoPlotter.png")), align = "center"), windowTitle = 'ProteoPlotter'),
   tags$style(HTML(".shiny-output-error-validation {color: red; font-size:18px;}")), #change error messages to colour red
-  tags$style(HTML(".navbar {float:right; margin-right:50px;}")),
-  navbarPage(title = h6(icon("images"), "Dimensions"),
-             navbarMenu("",
-                        tabPanel(
-                          numericInput("width.val", label = "Width (in)", value = 13, width = "50%")
-                        ),
-                        tabPanel(
-                          numericInput("height.val", label = "Height (in)", value = 8, width = "50%")
-                        )
-             )
-             
+  
+  fluidRow(
+    column(2, offset = 8,
+           tags$style(HTML(".navbar {left:80px;}")),
+           navbarPage(title = h6(icon("images"), "Dimensions"), 
+                      navbarMenu("",
+                                 tabPanel(
+                                   numericInput("width.val", label = "Width (px)", value = 1920, width = '70%')
+                                 ),
+                                 tabPanel(
+                                   numericInput("height.val", label = "Height (px)", value = 1080, width = '70%')
+                                 )
+                      ),
+           )
+    ),
+    column(2,
+           navbarPage(title = h6(icon("images"), "DPI"),
+                      navbarMenu("",
+                                 tabPanel(
+                                   numericInput("dpi.val", label = "DPI", value = 300, width = '70%')
+                                 )
+                      )
+           )
+    )
   ),
   tabsetPanel(
     tags$style(HTML(".homepg { margin-top: -2px; }")),
@@ -626,12 +644,12 @@ ui <- shinyUI(fluidPage(
                                                                  selected = "Keywords",
                                                                  width = '100%')),
                                   column(width = 12, selectInput("go.terms",
-                                                                 label = "Label on the plot:",
+                                                                 label = "Annotation terms:",
                                                                  choices = list(), multiple = T)),
                                   column(width = 12, radioButtons("which.proteins",
-                                                                  label = "For all vs. significant proteins",
+                                                                  label = "All vs. significant proteins",
                                                                   choices = list("All", "Significant"),
-                                                                  selected = "All", inline = T, width = '100%')),
+                                                                  selected = "Significant", inline = T, width = '100%')),
                                   column(width = 12, checkboxInput("filter.terms.by.1d",
                                                                    label = HTML("Keep only GO terms from the 1D enrichment data<br/>(Requires the 1D matrix*)"))),
                                   column(width = 12, br()),
@@ -644,7 +662,7 @@ ui <- shinyUI(fluidPage(
                  
                  h4("Volcano Plot",  align = "center"),
                  ##Volcano plot output with brush selection of points
-                 uiOutput("upload.dfcurves"),
+                 uiOutput("curves.err"),
                  plotOutput("volcanoplot",
                             brush = brushOpts("vplot.brush"), 
                             hover = hoverOpts("vplot.hover")),
@@ -721,18 +739,18 @@ ui <- shinyUI(fluidPage(
                             fluidRow(
                               column(width = 12,
                                      fileInput("vennfile", label = "Venn Diagram / UpSet Plot Matrix")),
-                              column(width = 12, h6("Group identifier: based on based on grouping levels in the uploaded matrix.")),
+                              column(width = 12, h6("Group identifier: based on grouping levels in the uploaded matrix.")),
                               column(width = 6, selectizeInput("grp.identifier.v", 
                                                                label = "Group Identifier", 
                                                                choices = c(), width = "80%")),
-                              column(width = 6, actionButton("eval.valid.vals", label = "Generate Venn", 
+                              column(width = 6, actionButton("gen.venn", label = "Generate Venn", 
                                                              style="color: blue;")),
                               column(width = 12, selectInput("venngroups", 
                                                              label = "Select Groups:", 
                                                              choices = c(), multiple = T)),
                               shinyBS::bsTooltip(id = "venngroups", title = "Select groups to be compared.", "focus"),
                               column(width = 12, br()),
-                              column(width = 6, uiOutput("col.title.venn")),
+                              column(width = 12, uiOutput("col.title.venn")),
                               column(width = 12, uiOutput("venn.colour.picker")),
                               column(width = 12, br()),
                               column(width = 12, checkboxGroupInput("count_percent", 
@@ -777,11 +795,18 @@ ui <- shinyUI(fluidPage(
                sidebarPanel(width = 4,
                             fluidRow(
                               column(width = 8, p("Upload matrix under the Venn Diagram tab")),
-                              column(width = 4, p("Text Size", style = "font-weight: bold;")),
+                              column(width = 12, selectInput("upsetgroups", 
+                                                             label = "Select Groups:", 
+                                                             choices = c(), multiple = T)),
                               column(width = 6, actionButton("gen.upset", label = "Generate Plot")),
-                              column(width = 4, numericInput("upset.text.sz", label = NULL, 
-                                                             value = 1.5, step = 0.1, max = 5), offset = 2),
-                              column(width = 6, uiOutput("col.title.upSet")),
+                              column(width = 12, br()),
+                              column(width = 4, numericInput("upset.text.sz", label = 'Text size', 
+                                                             value = 1.5, step = 0.5, max = 10)),
+                              column(width = 4, numericInput("upset.pt.sz", label = 'Dot size', 
+                                                             value = 2.5, step = 0.2, max = 10)),
+                              column(width = 3, numericInput("upset.line.sz", label = 'Line size', 
+                                                             value = 1, step = 0.2, max = 10)),
+                              column(width = 12, uiOutput("col.title.upSet")),
                               column(width = 12, uiOutput(outputId = "upSet.colour.picker"))
                             )
                ),
@@ -794,14 +819,16 @@ ui <- shinyUI(fluidPage(
              fluidRow(style = "background-color: #DEDEDEFD;",
                       column(12, 
                              p(br(), 
-                               "Note: All matrices are to be exported from Perseus in txt format. The 'Dimensions' dropdown menu on the upper-right enables you to modify the download width and height.")),
+                               "Note: All matrices are to be exported from Perseus in the .txt format. The 'Dimensions' and DPI dropdown menu on the upper-right enable the user to modify the download width, height, and resolution.")),
                       column(4,
                              p(h5("1D Annotation Heatmap",  style="font-weight:bold; color:#000045FF;"),
-                               tags$b("Input:"), "Matrix containing 1D annotation scores as computed with the '1D annotation enrichment' feature in Perseus - exported in txt format.", br(),
-                               tags$b("Create:"), "Upload the matrix to the file-input field within the '1D Annotation Heatmap' tab to generate 1D heatmaps for Gene Ontology (GO) categories and Keywords. The customization options allow you to reorder the heatmap columns. You can also filter the 1D annotation results to keep only under a certain FDR value or within a certain range of 1D score i.e. -1D Score : +1D Score.", br(), br(),
+                               h5("- Visualizes the functional enrichment of annotation terms within samples, based on 1D annotation enrichment scores ranging from -1 to 1.", style="color:#000045FF;"),
+                               tags$b("Input:"), "Matrix containing 1D annotation scores computed with the '1D annotation enrichment' feature in Perseus - exported in the .txt format.", br(),
+                               tags$b("Create:"), "Upload the matrix to the file-input field within the '1D Annotation Heatmap' tab to generate 1D heatmaps for Gene Ontology (GO) categories and Keywords. The customization options allow you to reorder the heatmap columns. You can also filter the 1D annotation results to retain those under a certain FDR threshold or within a specific range of the 1D score i.e. -1D Score : +1D Score.", br(), br(),
                                
-                               h5("Volcano Plot",  style="font-weight:bold; color:#000045FF;"),
-                               tags$b("Input 1:"), "Imputed matrix containing T-test result columns for only one pairwise comparison as well and the other columns for protein intensities, Protein IDs, etc. When computing the T-test in Perseus, please ensure that q-values are reported in the matrix.", br(),
+                               h5("Volcano Plot (only reads Student's T-test input data)",  style="font-weight:bold; color:#000045FF;"),
+                               h5("- Illustrates proteins that significantly differ in abundance between compared proteomes.", style="color:#000045FF;"),
+                               tags$b("Input 1:"), "Imputed matrix containing T-test result columns for only one pairwise comparison and the other columns for protein intensities, Protein IDs, etc. When computing the T-test in Perseus, please ensure that q-values are reported in the matrix.", br(),
                                "GO annotation is not required for the volcano plot matrix.", br(),
                                tags$b("Input 2:"), "Optional. You can add upload a second matrix which contains x-y coordinates for the curves indicating the FDR threshold on the volcano plot. This matrix can be exported after generating a volcano plot for the group pair within Perseus.", br(),
                                tags$b("Create:"), "Upload the required matrix to the file-input field within the 'Volcano Plot' tab. Select the group identifier based on the commented rows in the matrix, then generate the volcano plot.", br(),
@@ -810,24 +837,27 @@ ui <- shinyUI(fluidPage(
                       
                       column(4, 
                              p(h5("PCA and Dynamic Range Plots",  style="font-weight:bold; color:#000045FF;"),
+                               h5("- The PCA plot reduces the dimensionality of proteins into their principal components, allowing the user to identify patterns and degree of variation among replicates or groups. The dynamic range plot illustrates the distribution of protein abundance across proteomes.",
+                                  style="color:#000045FF;"),
                                tags$b("Input:"), "The volcano plot matrix is used to generate both the PCA plot and Dynamic range plot.", br(),
-                               "T-test result columns are not required for these plots so you export the imputed matrix without calculating T-test results.", br(),
+                               "T-test result columns are not required for these plots so the imputed matrix can be exported without calculating T-test results.", br(),
                                tags$b("Create:"), "Simply upload the matrix within the 'Volcano Plot' tab, select the appropriate group identifier, then return to the 'PCA Plot' or 'Dynamic Range Plot' tab to generate the figures.", br(), 
                                "For the PCA plot, you can add ellipses to show the probability distribution of observations within a 95% CI.", br(),
-                               "*The PCA plot can show ellipses only when there are more than 3 groups.", br(), br(),
+                               "*The PCA plot allows ellipses only when there are 4 or more groups.", br(), br(),
                                
                                h5("Venn Diagram",  style="font-weight:bold; color:#000045FF;"),
-                               tags$b("Input:"), "Accepts the matrix containing unimputed protein abundance values.", br(),
+                               h5("- Compares the number of proteins across up to 5 sample groups, revealing their degree of similarity and difference.",  style="color:#000045FF;"),
+                               tags$b("Input:"), "Accepts the matrix containing average protein intensity values computed using the 'average groups' tab in Perseus.", br(),
                                tags$b("Create:"), "Upload the matrix within the 'Venn Diagram' tab, select the appropriate identifier, then generate the Venn diagram.", br(),
-                               "Using the customization options, you can choose which groups to be compared with the figure. In addition, you can adjust the minimum proportion of valid values, which determines the presence of a protein within a group.", br(),
-                               "*This feature visualizes a maximum of 5 groups. See UpSet plot feature for more."
+                               "Using the 'Set Group' customization option, you can choose or reorder the groups to compare within the figure.", br(),
+                               "*See the UpSet plot feature to visualize more than 5 groups."
                              )),
                       
                       column(4,
                              p(h5("UpSet Plot",  style="font-weight:bold; color:#000045FF;"),
-                               tags$b("Input:"), "Utilizes the same unimputed matrix as the Venn diagram.", br(),
-                               tags$b("Create:"), "Upload the matrix within the 'Venn Diagram' tab, select the identifier, choose groups if needed, then generate the UpSet plot within the 'UpSet Plot' tab.", br(),
-                               "*With the UpSet plot, you can compare more than 5 groups.", br(), br() 
+                               h5("- Similar to the Venn diagram, this compares the number of proteins across up to 25 sample groups.",  style="color:#000045FF;"),
+                               tags$b("Input:"), "Utilizes the same matrix as the Venn diagram.", br(),
+                               tags$b("Create:"), "Upload the matrix within the 'Venn Diagram' tab, select the identifier, then generate the UpSet plot within the 'UpSet Plot' tab, choosing or reordering groups as needed.", br(), br(), br() 
                              ))
              )
     )
@@ -919,6 +949,7 @@ server <- function(input, output, session) {
       df <- process_df(prot.dataset = df.prot(), fdr = input$fdr.val, s0 = input$s.knot, gid = grp.identifier)
     })
   })
+
   
   
   ####Volcano plot -----  
@@ -972,9 +1003,7 @@ server <- function(input, output, session) {
         if (input$filter.terms.by.1d == T) {
           all.go.terms <- all.go.terms[all.go.terms %in% df.1d()$Name]
         } 
-        #populate go terms list
-        # validate(need(!is.null(df.1d()),
-        #               "Please upload the 1D matrix to filter GO terms."))
+        
         updateSelectInput(session,
                           "go.terms",
                           choices = c("Select from dropdown"='', all.go.terms))
@@ -1011,7 +1040,6 @@ server <- function(input, output, session) {
   })
   #send vplot to the UI
   output$volcanoplot <- renderPlot({
-    
     tryCatch({
       if (is.na(input$xmin) && is.na(input$xmax) && is.na(input$ymin) && is.na(input$ymax)) {
         vplot()[[1]]
@@ -1024,25 +1052,38 @@ server <- function(input, output, session) {
       }
     })
   })
+  #Display warning for overlaps if annotating many long terms
+  observe({req(input$go.terms, vplot())
+    pl.b <- ggplot_build(vplot()[[1]])
+    #Extract annotation data from ggplot
+    ann.terms <- pl.b$data[[3]]
+    n.terms = nrow(ann.terms) #how many annotated terms 
+    n.char = max(sapply(input$go.terms, nchar)) #num characters per selected term
+    if(n.terms >= 25 && n.char >= 25) {
+      showNotification({ 
+        h4("Warning: When a lengthy annotation term appears across many proteins, some annotations may be obscured due to an increase in overlap.",  style = "color: red; font-size: 13px;") }, duration = NULL)
+    }
+  })
   #Add error message for when FDR curve file is missing.
   observe({
     fdr.opts <- input$fdrlines
     curve.file <- input$curvesfile
     if(fdr.opts == "Yes" && is.null(curve.file)){
-      output$upload.dfcurves <- renderUI({ h4("Please upload the matrix containing x and y coordinates for the FDR curves.",  style = "color: red;") })
+      output$curves.err <- renderUI({ h4("Please upload the matrix containing x and y coordinates for the FDR curves.",  style = "color: red;") })
     } else if(fdr.opts == "No" | !is.null(curve.file)){  
-      output$upload.dfcurves  <- renderUI({ NULL }
+      output$curves.err  <- renderUI({ NULL }
       )}
   })
   #Reset volcano to default plot
   observeEvent(input$reset, {
     shinyjs::reset("reset.grp")
   })
+  #Download volcano plot
   output$dlvplot <- downloadHandler( 
     filename = "Volcano_plot.png",
     content = function(file) {
       ggsave(file, plot = vplot()[[1]],
-             width = input$width.val, height = input$height.val,
+             width = input$width.val, height = input$height.val, dpi = input$dpi.val,
              device = "png", bg = 'white', units = dl.unit)
     }
   )
@@ -1098,7 +1139,7 @@ server <- function(input, output, session) {
     filename = "PCA.png",
     content = function(file) {
       ggsave(file, plot = pca.pl(),
-             width = input$width.val, height = input$height.val,
+             width = input$width.val, height = input$height.val, dpi = input$dpi.val,
              device = "png", bg = 'white', units = dl.unit)
     }
   )
@@ -1117,7 +1158,7 @@ server <- function(input, output, session) {
     filename = function() { paste("scurve.png") },
     content = function(file) {
       ggsave(file, plot = scurve.pl(),
-             width = input$width.val, height = input$height.val,
+             width = input$width.val, height = input$height.val, dpi = input$dpi.val,
              device = "png", bg = 'white', units = dl.unit)
     }
   )
@@ -1174,7 +1215,7 @@ server <- function(input, output, session) {
     filename = "Bio_process.png",
     content = function(file) {
       ggsave(file, plot = bio.proc(), 
-             width = input$width.val, height = input$height.val,
+             width = input$width.val, height = input$height.val, dpi = input$dpi.val,
              device = "png", bg = 'white', units = dl.unit)
     }
   )
@@ -1182,7 +1223,7 @@ server <- function(input, output, session) {
     filename = "Cell_component.png",
     content = function(file) {
       ggsave(file, plot = cell.comp(),
-             width = input$width.val, height = input$height.val,
+             width = input$width.val, height = input$height.val, dpi = input$dpi.val,
              device = "png", bg = 'white', units = dl.unit)
     }
   )
@@ -1190,7 +1231,7 @@ server <- function(input, output, session) {
     filename = "Mol_function.png",
     content = function(file) {
       ggsave(file, plot = mol.func(),
-             width = input$width.val, height = input$height.val,
+             width = input$width.val, height = input$height.val, dpi = input$dpi.val,
              device = "png", bg = 'white', units = dl.unit)
     }
   )
@@ -1198,7 +1239,7 @@ server <- function(input, output, session) {
     filename = "Keywords.png",
     content = function(file) {
       ggsave(file, plot = keywords(), 
-             width = input$width.val, height = input$height.val,
+             weight = input$width.val, height = input$height.val, dpi = input$dpi.val,
              device = "png", bg = "white", units = dl.unit)
     }
   )
@@ -1226,61 +1267,76 @@ server <- function(input, output, session) {
     tryCatch({
       if(!is.null(input$grp.identifier.v)){
         df <- groupnames_to_colnames(df.venn(), gid = input$grp.identifier.v)
-        venn.groups <- select(df, !contains("IDs"))
-        venn.groups <- gsub("\\.\\d+", "", names(venn.groups)) #remove serial numbers to extract group names
-        venn.groups <- unique(venn.groups)
+        df <- select(df, !contains("IDs"))
+        venn.groups <- names(df)
         #Show group names on UI
         updateSelectInput(session,
                           inputId = "venngroups",
                           choices = venn.groups,
                           selected = venn.groups)
+        updateSelectInput(session,
+                          inputId = "upsetgroups",
+                          choices = venn.groups,
+                          selected = venn.groups)
       }
     })
   })
-  #Evaluate valid values
-  venn.input <- reactive({req(df.venn(), input$eval.valid.vals, input$venngroups)
+  
+  #Convert data to binary
+  venn.input <- reactive({req(df.venn(), input$venngroups)
     tryCatch({
       df <- groupnames_to_colnames(df.venn(), gid = input$grp.identifier.v)
       evaluate_valid_vals(venn.df = df, 
                           group.names = input$venngroups)
     })
   })
-  #Generate dynamic colour pickers for each venn group based on group names
-  venn.groups <- eventReactive(input$venngroups, {
-    gsub("\\W", "_", input$venngroups, perl = T) #Shiny does not like non-alphanumeric symbols (\\W) in input ids so remove if any
-  })
-  observeEvent(venn.groups(), {
-    venn.groups <- venn.groups()
-    output$col.title.upSet <- renderUI({ 
-      p("Colours:", style = "font-weight: bold; color: #8b0000; background-color: lightgrey;")
+  upset.input <- reactive({req(df.venn(), input$upsetgroups)
+    tryCatch({
+      df <- groupnames_to_colnames(df.venn(), gid = input$grp.identifier.v)
+      evaluate_valid_vals(venn.df = df, 
+                          group.names = input$upsetgroups)
     })
+  })
+ 
+  observe({req(input$venngroups)
+    venn.groups <- input$venngroups
     output$col.title.venn <- renderUI({ 
       p("Colours:", style = "font-weight: bold; color: #8b0000; background-color: lightgrey;")
     })
-    
     output$venn.colour.picker <- renderUI({
       lapply(venn.groups, function(v) {
-        column(width = 4, colourpicker::colourInput(inputId = v, label = paste0(v),
+        formatted.v <- gsub("\\W", "_", v, perl = T)
+        column(width = 4, colourpicker::colourInput(inputId = formatted.v, label = paste0(v),
                                                     value = "white", allowTransparent = T))
       })
     })
+  })
+  observe({req(input$upsetgroups)
+    upset.groups <- input$upsetgroups
+    output$col.title.upSet <- renderUI({ 
+      p("Colours:", style = "font-weight: bold; color: #8b0000; background-color: lightgrey;")
+    })
     output$upSet.colour.picker <- renderUI({
-      lapply(venn.groups, function(u) {
-        formatted.u <- paste0("u", u) #add u in front of upset plot colour ids to differentiate from venn colour ids. 
+      lapply(upset.groups, function(u) {
+        formatted.u <- paste0("u", u) %>% #add u in front of upset plot colour ids to differentiate from venn colour ids. 
+          gsub("\\W", "_", ., perl = T)
         column(width = 4, colourpicker::colourInput(inputId = formatted.u,
                                                     label = paste0(u), value = "grey21", 
                                                     allowTransparent = T))
       })
     })
+    
   })
   #Put all colour input ids in vectors for customizing the venn and upset plots
-  venn.colour.ids <- reactive({req(venn.groups())
-    sapply(venn.groups(), function(v) { 
+  venn.colour.ids <- reactive({req(input$venngroups)
+    grps <- gsub("\\W", "_", input$venngroups, perl = T) #remove non-alphanumeric symbols (\\W) in input ids 
+    sapply(grps, function(v) { 
       input[[v]]
     })
   })
-  upset.colour.ids <- reactive({req(venn.groups())
-    sapply(venn.groups(), function(u) {
+  upset.colour.ids <- reactive({req(input$upsetgroups)
+    grps <- gsub("\\W", "_", input$upsetgroups, perl = T)
+    sapply(grps, function(u) {
       formatted.u <- paste0("u", u) 
       input[[formatted.u]]
     })
@@ -1288,7 +1344,7 @@ server <- function(input, output, session) {
   
   
   #Create venn diagram with binary values and colourinput variables
-  venn.pl <- reactive({req(venn.input())
+  venn.pl <- reactive({req(venn.input(), input$gen.venn)
     tryCatch({
       venn.fit <- lapply(venn.input()[["binary.result"]],
                          \(x) which(x==1))
@@ -1308,26 +1364,28 @@ server <- function(input, output, session) {
     filename = "Venn.png",
     content = function(file) {
       ggsave(file, plot = venn.pl(),
-             # width = 9, height = 9,
-             device = "png", bg = 'white', width = input$width.val, 
-             height = input$height.val, units = dl.unit)
+             device = "png", bg = 'white', 
+             width = input$width.val, height = input$height.val, dpi = input$dpi.val,
+             units = dl.unit)
     }
   )
   
   
-  
   #UpSet Plot
-  upset.pl <- reactive({req(df.venn(), input$gen.upset, input$venngroups)
+  upset.pl <- reactive({req(df.venn(), input$gen.upset, upset.input())
+    upset.colour.ids <- upset.colour.ids()
     tryCatch({
-      if(!is.null(input$grp.identifier.v)){
-        df <- groupnames_to_colnames(df.venn(), gid = input$grp.identifier.v)
-        results <- evaluate_valid_vals(venn.df = df,
-                                       group.names = input$venngroups)
-        binary <- as.data.frame(results[["binary.result"]], check.names = F)
-        pl <- upset(binary, order.by = c("freq"), text.scale = input$upset.text.sz, 
-                    sets.bar.color = upset.colour.ids(),
-                    nsets = length(binary), nintersects = NA, sets = names(binary))
-      }
+      upset.fit <- as.data.frame(upset.input()[["binary.result"]], check.names = F)
+      sn = names(upset.fit)
+      pl <- upset(upset.fit, order.by = c("freq"), 
+                  text.scale = input$upset.text.sz, 
+                  sets.bar.color = upset.colour.ids,
+                  keep.order = T,
+                  nsets = length(upset.fit), nintersects = NA, 
+                  main.bar.color = 'grey21',
+                  point.size = input$upset.pt.sz,
+                  line.size = input$upset.line.sz,
+                  sets = sn)
       return(pl)
     })
   })
@@ -1336,7 +1394,7 @@ server <- function(input, output, session) {
     filename = "UpSet.png",
     content = function(file) {
       ggsave(file, plot = print(upset.pl()),
-             width = input$width.val, height = input$height.val,
+             width = input$width.val, height = input$height.val, dpi = input$dpi.val,
              device = "png", bg = 'white', units = dl.unit)
     }
   )
