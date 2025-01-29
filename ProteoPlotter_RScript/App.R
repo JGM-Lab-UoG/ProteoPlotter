@@ -522,7 +522,11 @@ ui <- shinyUI(fluidPage(
                          div(img(src = "ProteoPlotter_workflow.png"), style="text-align: center;"),
                          br(), br()),
                       p("The source code and sample files are available on", 
+<<<<<<< HEAD
                         a("Github.", href = "https://https://github.com/JGM-Lab-UoG/ProteoPlotter", target = "_blank"), style = "color: darkred;"),
+=======
+                        a("Github.", href = "https://github.com/JGM-Lab-UoG/ProteoPlotter", target = "_blank"), style = "color: darkred;"),
+>>>>>>> 48808849f3d5b550f820f6f211da63a161756575
                       p("Contact us: jgeddesm@uoguelph.ca", style = "color: darkred;"),
                       br(), br(), br()),
                column(4)
