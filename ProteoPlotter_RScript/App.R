@@ -1239,7 +1239,7 @@ server <- function(input, output, session) {
     filename = "Keywords.png",
     content = function(file) {
       ggsave(file, plot = keywords(), 
-             weight = input$width.val, height = input$height.val, dpi = input$dpi.val,
+             width = input$width.val, height = input$height.val, dpi = input$dpi.val,
              device = "png", bg = "white", units = dl.unit)
     }
   )
