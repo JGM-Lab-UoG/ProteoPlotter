@@ -11,7 +11,7 @@ ProteoPlotter is an interactive web-based software developed to complement [Pers
 - **Comprehensive Guide**: Instructions for preparing and uploading Perseus output files are provided to facilitate ease of use.
 
 ## Getting Started
-1. **Download the `ProteoPlotter_Desktop.zip` folder**: The latest version is available [here](https://github.com/JGM-Lab-UoG/Extending_Perseus-Esther-/releases/tag/v1.0.0).
+1. **Download the `ProteoPlotter_Windows.zip` folder**: The latest version is available [here](https://github.com/JGM-Lab-UoG/Extending_Perseus-Esther-/releases/tag/v1.0.0).
 2. **Access the folder**: Unzip the folder, then click the `run.vbs` file to run ProteoPlotter on your PC. 
 3. **Prepare data or apply sample datasets**: Generate tabular output files from Perseus or utilize the sample input files provided.
 4. **Upload and sisualize**: Upload input files to the ProteoPlotter software to create data visualizations!
