@@ -379,10 +379,12 @@ pca_plot <- function(df, gid = NULL, ellipse = "No", .colours =  NULL) {
   scl = 0
   if (!is.null(.colours)) {
     colour.layer <- scale_colour_manual(values = .colours)
-  } else { colour.layer <- NULL}
+  } else { 
+    colour.layer <- NULL
+  }
   layers <- list(
     colour.layer,
-    guides(colour=guide_legend("SampleZ", override.aes =list(size=4)), fill = "none", size = "none"),
+    guides(colour=guide_legend("Sample", override.aes =list(size=4)), fill = "none", size = "none"),
     theme_classic(),
     theme(axis.line = element_line(colour = "black"),
           text = element_text(size = text.sz),
@@ -396,8 +398,7 @@ pca_plot <- function(df, gid = NULL, ellipse = "No", .colours =  NULL) {
   
   
   pca_plain <- autoplot(pca, data = counts, size = point.sz, 
-                        scale = scl, colour = "Group.names") + 
-    guides(colour=guide_legend("Sample Type"), fill = "none", size = "none")+ layers
+                        scale = scl, colour = "Group.names") + layers
   #extract wider axes limits from pca_ellipse
   pca_ellipse_build <- ggplot_build(pca_ellipse)
   pca_ellipse_x <- pca_ellipse_build$layout$panel_params[[1]]$x.range
