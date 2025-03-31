@@ -374,6 +374,7 @@ pca_plot <- function(df, gid = NULL, ellipse = "No", .colours =  NULL) {
   
   pca <- prcomp(counts)
   counts$Group.names <- sub("\\.\\d+", "", rownames(counts)) #remove serial numbers to extract group names
+  names(.colours) <- unique(counts$Group.names) #ensure colours are named to match the group names
   text.sz = 19
   point.sz = 4.8
   scl = 0
